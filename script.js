@@ -1221,7 +1221,10 @@ function renderCustomers() {
 
 // ADD CUSTOMER PAYMENT
 
-function addPayment(id) {
+
+// ADD CUSTOMER PAYMENT
+
+async function addPayment(id) {
 
     const customer = customers.find(
         item => item.id === id
@@ -1245,20 +1248,30 @@ function addPayment(id) {
         amount <= 0 ||
         amount > pending
     ) {
-
         alert("Please enter a valid payment amount.");
         return;
-
     }
 
-    customer.paid += amount;
+    const newPaid = customer.paid + amount;
 
-    saveCustomers();
+    const { error } = await supabaseClient
+        .from("customers")
+        .update({
+            total_paid: newPaid
+        })
+        .eq("id", id);
+
+    if (error) {
+        console.error("Payment Update Error:", error.message);
+        alert("Payment update failed: " + error.message);
+        return;
+    }
+
+    customer.paid = newPaid;
 
     renderCustomers();
 
     alert("Payment updated successfully!");
-
 }
 
 

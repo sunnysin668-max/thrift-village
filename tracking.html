@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Your Order | Thrift Village</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .tracking-container {
+            max-width: 650px;
+            margin: 60px auto;
+            padding: 25px;
+        }
+        .tracking-card {
+            padding: 25px;
+            border-radius: 12px;
+            background: #fff;
+            color: #222;
+        }
+        .tracking-status {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f1f1f1;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .tracking-info {
+            line-height: 2;
+        }
+        #trackingMessage {
+            margin-top: 20px;
+        }
+        .order-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 35px 0;
+    gap: 5px;
+}
+
+.progress-step {
+    text-align: center;
+    min-width: 45px;
+    color: #999;
+    font-size: 12px;
+}
+
+.progress-circle {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: #ddd;
+    color: #555;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto auto 8px;
+    font-weight: bold;
+}
+
+.progress-step.active {
+    color: #16803c;
+    font-weight: bold;
+}
+
+.progress-step.active .progress-circle {
+    background: #16803c;
+    color: white;
+}
+
+.progress-line {
+    height: 4px;
+    flex: 1;
+    background: #ddd;
+    border-radius: 5px;
+    margin-top: -20px;
+}
+
+.progress-line.active {
+    background: #16803c;
+}
+    </style>
+</head>
+<body>
+
+    <div class="tracking-container">
+        <div class="tracking-card">
+            <h1>THRIFT VILLAGE ❤️</h1>
+            <h2>Track Your Order</h2>
+
+            <div id="trackingMessage">Loading your order...</div>
+
+            <div id="trackingDetails" style="display:none;">
+                <div class="tracking-status">
+    Order Status: <span id="orderStatus"></span>
+</div>
+
+<!-- ORDER PROGRESS TRACKER -->
+<div class="order-progress">
+
+    <div class="progress-step" id="stepPending">
+        <div class="progress-circle">1</div>
+        <p>Pending</p>
+    </div>
+
+    <div class="progress-line" id="line1"></div>
+
+    <div class="progress-step" id="stepProcessing">
+        <div class="progress-circle">2</div>
+        <p>Processing</p>
+    </div>
+
+    <div class="progress-line" id="line2"></div>
+
+    <div class="progress-step" id="stepShipped">
+        <div class="progress-circle">3</div>
+        <p>Shipped</p>
+    </div>
+
+    <div class="progress-line" id="line3"></div>
+
+    <div class="progress-step" id="stepDelivered">
+        <div class="progress-circle">4</div>
+        <p>Delivered</p>
+    </div>
+
+</div>
+
+                <div class="tracking-info">
+                    <p>Payment: <span id="paymentStatus"></span></p>
+                    <p>Order Date: <span id="orderDate"></span></p>
+                    <p>Total: ₹<span id="orderTotal"></span></p>
+                </div>
+
+                <h3>Products</h3>
+                <div id="orderItems"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+
+    <script>
+    async function trackOrder() {
+
+        const token = new URLSearchParams(
+            window.location.search
+        ).get("token");
+
+        const message = document.getElementById("trackingMessage");
+
+        if (!token) {
+            message.textContent = "Invalid tracking link.";
+            return;
+        }
+
+        const { data, error } = await supabaseClient
+            .rpc("get_order_tracking", {
+                p_token: token
+            });
+
+        if (error || !data || data.length === 0) {
+            message.textContent = "Order not found.";
+            return;
+        }
+
+        const order = data[0];
+
+        document.getElementById("trackingDetails").style.display = "block";
+        message.textContent = "Your order details are below.";
+
+        document.getElementById("orderStatus").textContent = order.order_status;
+        // UPDATE ORDER PROGRESS
+
+const steps = [
+    "Pending",
+    "Processing",
+    "Shipped",
+    "Delivered"
+];
+
+const currentStep = steps.indexOf(order.order_status);
+
+steps.forEach((status, index) => {
+
+    if (index <= currentStep) {
+        document.getElementById(
+            "step" + status
+        ).classList.add("active");
+    }
+
+});
+
+for (let i = 1; i <= 3; i++) {
+
+    if (currentStep >= i) {
+        document.getElementById(
+            "line" + i
+        ).classList.add("active");
+    }
+
+}
+        document.getElementById("paymentStatus").textContent = order.payment_status;
+        document.getElementById("orderDate").textContent =
+            new Date(order.created_at).toLocaleDateString("en-IN");
+
+        document.getElementById("orderTotal").textContent = order.total_amount;
+
+        document.getElementById("orderItems").innerHTML =
+            (order.items || []).map(item =>
+                `<p>${item.name} - ₹${item.price}</p>`
+            ).join("");
+    }
+
+    trackOrder();
+    // AUTO REFRESH ORDER STATUS
+setInterval(trackOrder, 10000);
+    </script>
+
+</body>
+</html>
